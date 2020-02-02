@@ -10,6 +10,8 @@ import time
 BAG_DUR = 18        # duration of bag (used to sleep so all messages are recieved)
 CERT = .1           # set value for uncertainty estimate initially
 MAX_SCAN = 3        # set longest scan distance to avoint 'inf' scan msgs
+
+# extracted start/end positions from csv manually since there were 2 values
 START = 5.3         # start time of movement forward in bag (actual)
 START_POS = 0       # initial position (actual)
 END = 10.3           # end time of movement in bag
@@ -124,8 +126,11 @@ class SubAndPlot:
         self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
         self.uncert = np.array([[CERT]])        # init uncertainty
         self.vel = 0
+        self.pos = 0
         self.odom_pts = []
         self.scan_pose_pts = []
+        self.plot_state = 0
+        self.fig = plt.figure()
         rospy.sleep(1)
    
     # callback for pose subscriber
@@ -141,7 +146,7 @@ class SubAndPlot:
     # callback for scan subscriber
     def scan_callback(self, msg):
         if msg.ranges[0] <= MAX_SCAN:
-            self.scan = 2-msg.ranges[0]         # put in global frame	
+            self.scan = 2-msg.ranges[0]         # put in global frame
             self.time = rospy.Time.now().to_sec()
             self.run_kalman()
         else:
@@ -165,23 +170,31 @@ class SubAndPlot:
         self.scan_pose_pts.append(((self.time - self.start_time), round(self.pos, 2)))
 
     # function for plotting information from a list of tuples
-    def plot(self, pts, figname):
-        fig = plt.figure()
-        fig.suptitle(figname, fontsize=20)
+    def plot(self, pts, figname, dot, err):
+#        self.fig = plt.figure()
+        self.fig.suptitle("Position vs Time", fontsize=20)
         plt.xlabel("time in sec", fontsize=15)
         plt.ylabel("position in m", fontsize=15)
-        plt.plot([pts[0][0]], [pts[0][1]], 'ro', label=figname)
+        plt.plot([pts[0][0]], [pts[0][1]], dot, label=figname)
         for i in pts:
-            plt.plot([i[0]],[i[1]], 'ro')
-        plt.plot([START], [START_POS], 'bo', label="Real Pos")
-        plt.plot([END], [END_POS], 'bo')
-        fig.savefig(figname+'.png')
+            plt.plot([i[0]],[i[1]], dot)
+        last = len(pts)-1
+        plt.plot([START], [START_POS - pts[0][1]], err, label='error')
+        plt.plot([END], [END_POS - pts[last][1]], err)
+        
+        if self.plot_state == 0:
+            plt.plot([START], [START_POS], 'bo', label='Actual pos')
+            plt.plot([END], [END_POS], 'bo')
+            self.plot_state = 1
+        plt.legend(loc='center right')
         print("plotted")
 
 if __name__ == '__main__':
     a = Run()
     b = SubAndPlot()
     rospy.sleep(BAG_DUR)
-    b.plot(b.odom_pts, "new_odom2")
-    b.plot(b.scan_pose_pts, "new_scan_pose")
-    b.plot(a.vel_scan_pts, "new_vel_scan")
+    b.plot(b.odom_pts, "Pose", 'ro', 'rx')
+    b.plot(b.scan_pose_pts, "Scan and Pose", 'go', 'gx')
+    b.plot(a.vel_scan_pts, "Vel and Scan", 'mo', 'mx')
+    b.fig.savefig("plot.png")
+
