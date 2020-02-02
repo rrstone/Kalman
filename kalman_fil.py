@@ -86,8 +86,9 @@ class Run:
         H = np.array([[1]])                 # world frame transformation
         a = Kalman(F, B, H, Q, R, self.uncert, self.pos)    # initialize 
         a.predict(self.vel)                 # predict with vel of 'u'm/s
-        a.correct(self.scan)                # predict with sense of 'z'm moved
+        a.correct(abs(self.scan))                # predict with sense of 'z'm moved
         self.uncert = a.P
+        print(self.scan)
         self.pos = a.x[0][0]
 
         pose_msg = PoseWithCovarianceStamped()
@@ -100,7 +101,7 @@ class Run:
         rate.sleep()
 
         # append points for plotting later
-        self.vel_scan_pts.append(((self.t - self.start_time), self.pos))
+        self.vel_scan_pts.append(((self.t - self.start_time), abs(self.pos)))
  
 class SubAndPlot:
     def __init__(self):
@@ -148,6 +149,9 @@ class SubAndPlot:
 
     def plot(self, pts, figname):
         fig = plt.figure()
+        fig.suptitle(figname, fontsize=20)
+        plt.xlabel("time in sec", fontsize=15)
+        plt.ylabel("position in m", fontsize=15)
         plt.plot([pts[0][0]], [pts[0][1]], 'ro', label=figname)
         for i in pts:
             plt.plot([i[0]],[i[1]], 'ro')
@@ -161,6 +165,6 @@ if __name__ == '__main__':
     rospy.sleep(18)
 #    print(b.scan_pose_pts)
 #    print(a.vel_scan_pts)
-#    b.plot(b.odom_pts, "new_odom2")
+    b.plot(b.odom_pts, "new_odom2")
     b.plot(b.scan_pose_pts, "new_scan_pose")
-#    b.plot(a.vel_scan_pts, "new_vel_scan")
+    b.plot(a.vel_scan_pts, "new_vel_scan")
