@@ -19,11 +19,10 @@ END_POS = 0.98      # final position (acutal)
 
 # class to implement the Kalman Filter
 class Kalman:
-    #initialize matrices to correct sizes
+    #initialize matrices to correct sizes/ F and H must be passed in
     def __init__(self, F = None, B = None, H = None, Q = None, R = None, P = None, x0 = None):
         self.n = F.shape[1]
         self.m = H.shape[1]
-
         self.F = F
         self.H = H
         if B is None:
@@ -166,12 +165,12 @@ class SubAndPlot:
         a.correct(self.scan)                # predict with sense of 'z'm moved
         self.uncert = a.P
         self.pos = a.x[0][0]		    # Updated pose estimate
+
         # store for plotting later
         self.scan_pose_pts.append(((self.time - self.start_time), round(self.pos, 2)))
 
     # function for plotting information from a list of tuples
     def plot(self, pts, figname, dot, err):
-#        self.fig = plt.figure()
         self.fig.suptitle("Position vs Time", fontsize=20)
         plt.xlabel("time in sec", fontsize=15)
         plt.ylabel("position in m", fontsize=15)
@@ -182,13 +181,16 @@ class SubAndPlot:
         plt.plot([START], [START_POS - pts[0][1]], err, label='error')
         plt.plot([END], [END_POS - pts[last][1]], err)
         
+        # plot actual start/end only once (if state is 0)
         if self.plot_state == 0:
             plt.plot([START], [START_POS], 'bo', label='Actual pos')
             plt.plot([END], [END_POS], 'bo')
             self.plot_state = 1
+
         plt.legend(loc='center right')
         print("plotted")
 
+# Driver
 if __name__ == '__main__':
     a = Run()
     b = SubAndPlot()
